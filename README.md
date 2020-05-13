@@ -2,7 +2,7 @@
 
 [<img src="https://github.com/vitabaks/postgresql_cluster/workflows/Ansible-lint/badge.svg?branch=master">](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3AAnsible-lint) [<img src="https://github.com/vitabaks/postgresql_cluster/workflows/Yamllint/badge.svg?branch=master">](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3AYamllint)  [![GitHub license](https://img.shields.io/github/license/vitabaks/postgresql_cluster)](https://github.com/vitabaks/postgresql_cluster/blob/master/LICENSE) ![GitHub stars](https://img.shields.io/github/stars/vitabaks/postgresql_cluster)
 
-### PostgreSQL High-Availability Cluster (based on "Patroni" and "DCS(etcd)"). Automating deployment with Ansible.
+### Deploy a Production Ready PostgreSQL High-Availability Cluster (based on "Patroni" and "DCS(etcd)"). Automating with Ansible.
 
 This Ansible playbook is designed for deploying a PostgreSQL high availability cluster on dedicated physical servers for a production environment.
 Сluster can be deployed in virtual machines for test environments and small projects.
@@ -18,7 +18,7 @@ You have two options available for deployment ("Type A" and "Type B"):
 ### [Type A] PostgreSQL High-Availability with Load Balancing
 ![TypeA](https://github.com/vitabaks/postgresql_cluster/blob/master/TypeA.png)
 
-> To use this scheme, specify `with_haproxy_load_balancing: 'true'` in variable file vars/main.yml
+> To use this scheme, specify `with_haproxy_load_balancing: true` in variable file vars/main.yml
 
 This scheme provides the ability to distribute the load on reading. This also allows us to scale out the cluster (with read-only replicas).
 
@@ -73,7 +73,7 @@ RedHat and Debian based distros (x86_64)
 - Ubuntu: 16.04
 - Debian: 8
 
-:white_check_mark: tested, works fine: `Debian 9/10, Ubuntu 18.04, CentOS 7.6/7.7/8.0/8.1`
+:white_check_mark: tested, works fine: `Debian 9/10, Ubuntu 18.04/20.04, CentOS 7.6/7.7/8.0/8.1`
 
 ###### PostgreSQL versions: 
 all supported PostgreSQL versions
@@ -234,7 +234,7 @@ See firewall_allowed_tcp_ports_for.balancers variable in the system.yml file.
 
 3. Edit the `main.yml` variable file
 
-Specify `with_haproxy_load_balancing: 'true'`
+Specify `with_haproxy_load_balancing: true`
 
 4. Run playbook:
 
