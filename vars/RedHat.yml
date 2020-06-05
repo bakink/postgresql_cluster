@@ -2,8 +2,7 @@
 # yamllint disable rule:line-length
 
 # PostgreSQL variables
-postgresql_cluster_name: "data"
-postgresql_data_dir: "/var/lib/pgsql/{{ postgresql_version }}/{{ postgresql_cluster_name }}"
+postgresql_data_dir: "/var/lib/pgsql/{{ postgresql_version }}/data"
 postgresql_conf_dir: "{{ postgresql_data_dir }}"
 postgresql_bin_dir: "/usr/pgsql-{{ postgresql_version }}/bin"
 postgresql_log_dir: "/var/log/postgresql"
@@ -23,6 +22,7 @@ yum_repository: []
 
 install_epel_repo: true  # or 'false' (installed from the package "epel-release-latest.noarch.rpm")
 install_postgresql_repo: true  # or 'false' (installed from the package "pgdg-redhat-repo-latest.noarch.rpm")
+install_scl_repo: true  # or 'false' (Redhat 7 family only)
 
 # Packages (for yum repo)
 os_specific_packages:
@@ -35,16 +35,17 @@ os_specific_packages:
     - libsemanage-python
     - policycoreutils-python
   RedHat-8:
+    - python2
     - python3-libselinux
     - python3-libsemanage
     - python3-policycoreutils
 system_packages:
+  - "{{ os_specific_packages[ansible_os_family ~ '-' ~ ansible_distribution_major_version] }}"
   - python3
   - python3-devel
   - python3-psycopg2
   - python3-setuptools
   - python3-pip
-  - "{{ os_specific_packages[ansible_os_family ~ '-' ~ ansible_distribution_major_version] }}"
   - curl
   - less
   - sudo
@@ -136,7 +137,7 @@ patroni_pip_package_repo: []
 # (if patroni_installation_type: "rpm")
 # You can preload the patroni rpm package to your YUM repository, or explicitly specify the path to the package in this variable:
 patroni_rpm_package_repo: []
-#  - "https://github.com/cybertec-postgresql/patroni-packaging/releases/download/1.6.0-1/patroni-1.6.0-1.rhel7.x86_64.rpm" # (package for RHEL/CentOS 7)
+#  - "https://github.com/cybertec-postgresql/patroni-packaging/releases/download/1.6.5-1/patroni-1.6.5-1.rhel7.x86_64.rpm"  # (package for RHEL/CentOS 7)
 
 
 # ================================================================================================= #
@@ -189,8 +190,8 @@ haproxy_src_file: "haproxy-1.8.21.tar.gz"  # http://www.haproxy.org/download/1.8
 # (optional) Specify additional rpm packages if required (for any installation_method)
 # this packages will be installed before all other packages.
 packages_from_file: []
-#  - "python36-psycopg2-2.7.7-1.el7.x86_64.rpm"  # https://mirror.linux-ia64.org/epel/7/x86_64/Packages/p/ # (required for "patroni")
-#  - "libyaml-0.1.4-11.el7_0.x86_64.rpm"  # (required for "patroni_rpm_package")
+#  - "python3-psycopg2-2.7.7-2.el7.x86_64.rpm"  # https://mirror.linux-ia64.org/epel/7/x86_64/Packages/p/  # (required for patroni rpm)
+#  - "libyaml-0.1.4-11.el7_0.x86_64.rpm"  # (required for patroni rpm)
 #  - "jq-1.5-1.el7.x86_64.rpm"  # https://mirror.linux-ia64.org/epel/7/x86_64/Packages/j/
 #  - "other-package-name_1_amd64.rpm"
 #  - ""
