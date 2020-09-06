@@ -10,7 +10,7 @@ proxy_env: {}
 # -------------------------------------------
 
 # Cluster variables
-cluster_vip: ""  # for client access to databases in the cluster (optional)
+cluster_vip: ""  # ip address for client access to databases in the cluster (optional)
 vip_interface: "{{ ansible_default_ipv4.interface }}"  # interface name (ex. "ens32")
 
 patroni_cluster_name: "postgres-cluster"  # specify the cluster name
@@ -23,17 +23,15 @@ patroni_replication_password: "replicator-pass"  # please change password
 
 synchronous_mode: false  # or 'true' for enable synchronous database replication
 synchronous_mode_strict: false  # if 'true' then block all client writes to the master, when a synchronous replica is not available
+synchronous_node_count: 1  # number of synchronous standby databases
 
 
 # Load Balancing
 with_haproxy_load_balancing: false  # or 'true' if you want to install and configure the load-balancing
-# if with_haproxy_load_balancing: true and cluster_vip is specified
-keepalived_virtual_router_id: "133"  # specify a unique virtual_router_id
 
 # vip-manager (if cluster_vip is specified and with_haproxy_load_balancing: false)
 vip_manager_version: "0.6"  # version to install
-vip_manager_conf_dir: "/etc/patroni"
-vip_manager_conf_file: "vip-manager.yml"
+vip_manager_conf: "/etc/patroni/vip-manager.yml"
 vip_manager_interval: "1000"  # time (in milliseconds) after which vip-manager wakes up and checks if it needs to register or release ip addresses.
 vip_manager_iface: "{{ vip_interface }}"  # interface to which the virtual ip will be added
 vip_manager_ip: "{{ cluster_vip }}"  # the virtual ip address to manage
@@ -45,7 +43,7 @@ dcs_exists: false  # or 'true' if you do not want to install and configure the e
 dcs_type: "etcd"
 
 # if dcs_exists: false and dcs_type: "etcd"
-etcd_ver: "v3.3.19"  # version for deploy etcd cluster
+etcd_ver: "v3.3.23"  # version for deploy etcd cluster
 etcd_data_dir: "/var/lib/etcd"
 etcd_cluster_name: "etcd-{{ patroni_cluster_name }}"  # ETCD_INITIAL_CLUSTER_TOKEN
 
@@ -127,6 +125,7 @@ postgresql_parameters:
   - {option: "archive_timeout", value: "1800s"}
   - {option: "archive_command", value: "cd ."}  # not doing anything yet with WAL-s
 #  - {option: "archive_command", value: "wal-g wal-push %p"}  # archive WAL-s using WAL-G
+#  - {option: "archive_command", value: "pgbackrest --stanza={{ pgbackrest_stanza }} archive-push %p"}  # archive WAL-s using pgbackrest
   - {option: "wal_level", value: "replica"}  # "replica" for PostgreSQL 9.6 and above (for 9.4, 9.5 use "hot_standby")
   - {option: "wal_keep_segments", value: "130"}
   - {option: "max_wal_senders", value: "10"}
@@ -178,10 +177,16 @@ postgresql_pg_hba:
   - {type: "host", database: "all", user: "all", address: "127.0.0.1/32", method: "md5"}
   - {type: "host", database: "all", user: "all", address: "::1/128", method: "md5"}
 #  - {type: "host", database: "mydatabase", user: "mydb-user", address: "192.168.0.0/24", method: "md5"}
+#  - {type: "host", database: "all", user: "all", address: "192.168.0.0/24", method: "ident", options: "map=main"}  # use pg_ident
+
+# list of lines that Patroni will use to generate pg_ident.conf
+postgresql_pg_ident: []
+#  - {mapname: "main", system_username: "postgres", pg_username: "backup"}
+#  - {mapname: "", system_username: "", pg_username: ""}
 
 
 # PgBouncer parameters
-install_pgbouncer: true  # or 'false' if you do not want to install and configure the pgbouncer service
+pgbouncer_install: true  # or 'false' if you do not want to install and configure the pgbouncer service
 pgbouncer_conf_dir: "/etc/pgbouncer"
 pgbouncer_log_dir: "/var/log/pgbouncer"
 pgbouncer_listen_port: 6432
@@ -189,19 +194,13 @@ pgbouncer_max_client_conn: 10000
 pgbouncer_max_db_connections: 1000
 pgbouncer_default_pool_size: 20
 pgbouncer_default_pool_mode: "session"
+pgbouncer_generate_userlist: true  # generate userlist.txt (all users and passwords md5) FROM pg_shadow
 
 pgbouncer_pools:
   - {name: "postgres", dbname: "postgres", pool_parameters: ""}
 #  - {name: "mydatabase", dbname: "mydatabase", pool_parameters: "pool_size=20 pool_mode=transaction"}
 #  - {name: "", dbname: "", pool_parameters: ""}
 #  - {name: "", dbname: "", pool_parameters: ""}
-
-pgbouncer_users:
-  - {username: "{{ patroni_superuser_username }}", password: "{{ patroni_superuser_password }}"}
-#  - {username: "mydb-user", password: "mydb-user-pass"}
-#  - {username: "", password: ""}
-#  - {username: "", password: ""}
-#  - {username: "", password: ""}
 
 
 # Extended variables (optional)
@@ -223,7 +222,7 @@ patroni_remove_data_directory_on_diverged_timelines: false  # or 'true'
 # if it notices that timelines are diverging and the former master can not start streaming from the new master.
 
 # https://patroni.readthedocs.io/en/latest/replica_bootstrap.html#bootstrap
-patroni_cluster_bootstrap_method: "initdb"  # or "wal-g"
+patroni_cluster_bootstrap_method: "initdb"  # or "wal-g", "pgbackrest"
 
 # https://patroni.readthedocs.io/en/latest/replica_bootstrap.html#building-replicas
 patroni_create_replica_methods:
@@ -233,7 +232,7 @@ patroni_create_replica_methods:
   - basebackup
 
 pgbackrest:
-  - {option: "command", value: "/usr/bin/pgbackrest --stanza=<stanza_name> --delta restore"}
+  - {option: "command", value: "/usr/bin/pgbackrest --stanza={{ pgbackrest_stanza }} --delta restore"}
   - {option: "keep_data", value: "True"}
   - {option: "no_params", value: "True"}
 wal_e:
@@ -249,8 +248,9 @@ basebackup:
   - {option: "checkpoint", value: "fast"}
 
 # "restore_command" written to recovery.conf when configuring follower (create replica)
-postgresql_restore_command: []
-# postgresql_restore_command: 'wal-g wal-fetch %f %p' # restore WAL-s using WAL-G
+postgresql_restore_command: ""
+# postgresql_restore_command: "wal-g wal-fetch %f %p"  # restore WAL-s using WAL-G
+# postgresql_restore_command: "pgbackrest --stanza={{ pgbackrest_stanza }} archive-get %f %p"  # restore WAL-s using pgbackrest
 
 
 # WAL-G
@@ -268,5 +268,35 @@ wal_g_json:  # more options see https://github.com/wal-g/wal-g#configuration
 #  - {option: "AWS_REGION", value: "us-east-1"}
 #  - {option: "WALG_S3_CA_CERT_FILE", value: "/path/to/custom/ca/file"}
 #  - {option: "", value: ""}
+
+# pgBackRest
+pgbackrest_install: false  # or 'true'
+pgbackrest_install_from_pgdg_repo: true  # or 'false'
+pgbackrest_stanza: "stanza_name"  # specify your --stanza
+pgbackrest_repo_type: "posix"  # or "s3"
+pgbackrest_repo_host: "10.128.64.50"  # dedicated repository host (if repo_type: "posix")
+pgbackrest_repo_user: "postgres"  # if "repo_host" is set
+pgbackrest_conf_file: "/etc/pgbackrest/pgbackrest.conf"
+# see more options https://pgbackrest.org/configuration.html
+pgbackrest_conf:
+  global:  # [global] section
+    - {option: "log-level-file", value: "detail"}
+    - {option: "log-path", value: "/var/log/pgbackrest"}
+    - {option: "repo1-type", value: "{{ pgbackrest_repo_type |lower }}"}
+    - {option: "repo1-host", value: "{{ pgbackrest_repo_host }}"}
+    - {option: "repo1-host-user", value: "{{ pgbackrest_repo_user }}"}
+#    - {option: "", value: ""}
+  stanza:  # [stanza_name] section
+    - {option: "pg1-path", value: "{{ postgresql_data_dir }}"}
+    - {option: "process-max", value: "2"}
+    - {option: "recovery-option", value: "recovery_target_action=promote"}
+#    - {option: "", value: ""}
+pgbackrest_patroni_cluster_restore_command:
+  '/usr/bin/pgbackrest --stanza={{ pgbackrest_stanza }} --delta restore'  # restore from latest backup
+#  '/usr/bin/pgbackrest --stanza={{ pgbackrest_stanza }} --type=time "--target=2020-06-01 11:00:00+03" --delta restore'  # Point-in-Time Recovery (example)
+
+# PITR mode (if patroni_cluster_bootstrap_method: "pgbackrest" or "wal-g"):
+# 1) The database cluster directory will be cleaned (for "wal-g") or overwritten (for "pgbackrest" --delta restore).
+# 2) And also the patroni cluster "{{ patroni_cluster_name }}" will be removed from the DCS (if exist) before recovery.
 
 ...

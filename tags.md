@@ -12,6 +12,7 @@
 - firewall
 - hostname
 - dns, nameservers
+- etc_hosts
 - sysctl, kernel
 - disable_thp
 - limits
@@ -43,6 +44,7 @@
 - - pgbouncer_service
 - - pgbouncer_logrotate
 - - pgbouncer_restart
+- - pgbouncer_generate_userlist
 - load_balancing
 - - haproxy
 - - - haproxy_requirements
@@ -78,3 +80,9 @@
 - wal_g
 - - wal_g_install
 - - wal_g_conf
+- pgbackrest
+- - pgbackrest_repo
+- - pgbackrest_install
+- - pgbackrest_conf
+- - pgbackrest_ssh_keys
+

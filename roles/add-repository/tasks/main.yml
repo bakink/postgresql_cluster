@@ -41,7 +41,7 @@
 
     - name: Get epel-release-latest rpm package
       get_url:
-        url: "http://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"  # noqa 204
+        url: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"  # noqa 204
         dest: /tmp/
         timeout: 30
         validate_certs: false
@@ -52,6 +52,7 @@
       package:
         name: "/tmp/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
         state: present
+        disable_gpg_check: true
       when: install_epel_repo|bool
       tags: install_epel_repo
 
@@ -79,9 +80,11 @@
       tags: install_scl_repo
 
     - name: Enable Software Collections (SCL) repository for RedHat 7
-      command: 'sudo yum-config-manager --enable rhel-server-rhscl-7-rpms'
+      become: true
+      become_user: root
+      command: subscription-manager repos --enable rhel-server-rhscl-7-rpms
       when: install_scl_repo|bool and
-            (ansible_distribution == 'Red Hat Enterprise Linux' and
+            (ansible_distribution == 'RedHat' and
             ansible_distribution_major_version == '7')
       tags: install_scl_repo
 
@@ -99,6 +102,7 @@
       package:
         name: /tmp/pgdg-redhat-repo-latest.noarch.rpm
         state: present
+        disable_gpg_check: true
       when: install_postgresql_repo|bool
       tags: install_postgresql_repo
   environment: "{{ proxy_env | default({}) }}"

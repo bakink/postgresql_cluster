@@ -1,6 +1,9 @@
 ---
 # yamllint disable rule:line-length
 
+- name: Make sure handlers are flushed immediately
+  meta: flush_handlers
+
 - block:
     - name: Check postgresql cluster health
       run_once: true
@@ -17,11 +20,13 @@
       debug:
         var: patronictl_result.stdout_lines
   ignore_errors: true
-  tags: patroni_status, cluster_info, cluster_status
+  tags: patroni_status, cluster_info, cluster_status, point_in_time_recovery
 
 - block:
     - name: Get postgresql database list
       run_once: true
+      become: true
+      become_user: postgres
       command:
         "{{ postgresql_bin_dir }}/psql -p {{ postgresql_port }} -U postgres -c
         \"
@@ -53,7 +58,7 @@
       debug:
         var: dbs_result.stdout_lines
   ignore_errors: true
-  tags: databases, db_list, cluster_info, cluster_status
+  tags: databases, db_list, cluster_info, cluster_status, point_in_time_recovery
 
 - block:
     - name: PostgreSQL Cluster connection info
@@ -91,7 +96,7 @@
           - port {{ pgbouncer_listen_port }} (pgbouncer)
           - +------------------------------------------------+
       when: not with_haproxy_load_balancing|bool and
-            install_pgbouncer|bool
+            pgbouncer_install|bool
 
     - name: PostgreSQL Cluster connection info
       run_once: true
@@ -102,7 +107,7 @@
           - port {{ postgresql_port }}
           - +------------------------------------------------+
       when: not with_haproxy_load_balancing|bool and
-            not install_pgbouncer|bool
+            not pgbouncer_install|bool
   when: cluster_vip is defined and cluster_vip | length > 0
   ignore_errors: true
   tags: conn_info, cluster_info, cluster_status
@@ -167,7 +172,7 @@
           - port {{ pgbouncer_listen_port }} (pgbouncer)
           - +------------------------------------------------+
       when: not with_haproxy_load_balancing|bool and
-            install_pgbouncer|bool
+            pgbouncer_install|bool
 
     - name: PostgreSQL Cluster connection info
       run_once: true
@@ -178,7 +183,7 @@
           - port {{ postgresql_port }}
           - +------------------------------------------------+
       when: not with_haproxy_load_balancing|bool and
-            not install_pgbouncer|bool
+            not pgbouncer_install|bool
   ignore_errors: true
   when: cluster_vip is not defined or cluster_vip | length < 1
   tags: conn_info, cluster_info, cluster_status

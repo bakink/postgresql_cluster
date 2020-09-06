@@ -7,6 +7,11 @@ nameservers:
   - "8.8.8.8"  # example (Google Public DNS)
   - "9.9.9.9"  # (Quad9 Public DNS)
 
+# /etc/hosts (optional)
+etc_hosts: []
+#  - "10.128.64.143 pgbackrest.minio.local minio.local s3.eu-west-3.amazonaws.com"  # example (MinIO)
+#  - ""
+
 ntp_enabled: false  # or 'true' if you want to install and configure the ntp service
 ntp_servers: []
 #  - "10.128.64.44"
@@ -117,10 +122,13 @@ firewall_allowed_tcp_ports_for:
     - "{{ postgresql_port }}"
     - "{{ pgbouncer_listen_port }}"
     - "8008"  # Patroni REST API port
+#    - "10050"  # Zabbix agent
+#    - ""
   etcd_cluster:
     - "{{ ansible_ssh_port | default(22) }}"
     - "2379"  # ETCD port
     - "2380"  # ETCD port
+#    - ""
   balancers:
     - "{{ ansible_ssh_port | default(22) }}"
     - "5000"  # HAProxy (read/write) master
@@ -128,6 +136,7 @@ firewall_allowed_tcp_ports_for:
     - "5002"  # HAProxy (read only) synchronous replica only
     - "5003"  # HAProxy (read only) asynchronous replicas only
     - "7000"  # HAProxy stats
+#    - ""
 
 firewall_additional_rules_for:
   master: []
