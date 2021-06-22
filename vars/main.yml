@@ -28,9 +28,16 @@ synchronous_node_count: 1  # number of synchronous standby databases
 
 # Load Balancing
 with_haproxy_load_balancing: false  # or 'true' if you want to install and configure the load-balancing
+haproxy_maxconn:
+  global: 100000
+  master: 10000
+  replica: 10000
+haproxy_timeout:
+  client: "60m"
+  server: "60m"
 
 # vip-manager (if cluster_vip is specified and with_haproxy_load_balancing: false)
-vip_manager_version: "0.6"  # version to install
+vip_manager_version: "1.0"  # version to install
 vip_manager_conf: "/etc/patroni/vip-manager.yml"
 vip_manager_interval: "1000"  # time (in milliseconds) after which vip-manager wakes up and checks if it needs to register or release ip addresses.
 vip_manager_iface: "{{ vip_interface }}"  # interface to which the virtual ip will be added
@@ -43,7 +50,7 @@ dcs_exists: false  # or 'true' if you do not want to install and configure the e
 dcs_type: "etcd"
 
 # if dcs_exists: false and dcs_type: "etcd"
-etcd_ver: "v3.3.23"  # version for deploy etcd cluster
+etcd_ver: "v3.3.25"  # version for deploy etcd cluster
 etcd_data_dir: "/var/lib/etcd"
 etcd_cluster_name: "etcd-{{ patroni_cluster_name }}"  # ETCD_INITIAL_CLUSTER_TOKEN
 
@@ -60,7 +67,7 @@ patroni_etcd_hosts: []
 
 
 # PostgreSQL variables
-postgresql_version: "12"
+postgresql_version: "13"
 # postgresql_data_dir: see vars/Debian.yml or vars/RedHat.yml
 postgresql_port: "5432"
 postgresql_encoding: "UTF8"  # for bootstrap only (initdb)
@@ -210,6 +217,19 @@ patroni_retry_timeout: 10
 patroni_maximum_lag_on_failover: 1048576
 patroni_master_start_timeout: 300
 
+patroni_log_destination: stderr  # or 'logfile'
+# if patroni_log_destination: logfile
+patroni_log_dir: /var/log/patroni
+patroni_log_level: info
+patroni_log_traceback_level: error
+patroni_log_format: "%(asctime)s %(levelname)s: %(message)s"
+patroni_log_dateformat: ""
+patroni_log_max_queue_size: 1000
+patroni_log_file_num: 4
+patroni_log_file_size: 25000000  # bytes
+patroni_log_loggers_patroni_postmaster: warning
+patroni_log_loggers_urllib3: warning  # or 'debug'
+
 patroni_postgresql_use_pg_rewind: true  # or 'false'
 # try to use pg_rewind on the former leader when it joins cluster as a replica.
 
@@ -227,7 +247,6 @@ patroni_cluster_bootstrap_method: "initdb"  # or "wal-g", "pgbackrest"
 # https://patroni.readthedocs.io/en/latest/replica_bootstrap.html#building-replicas
 patroni_create_replica_methods:
 #  - pgbackrest
-#  - wal_e
 #  - wal_g
   - basebackup
 
@@ -235,11 +254,6 @@ pgbackrest:
   - {option: "command", value: "/usr/bin/pgbackrest --stanza={{ pgbackrest_stanza }} --delta restore"}
   - {option: "keep_data", value: "True"}
   - {option: "no_params", value: "True"}
-wal_e:
-  - {option: "command", value: "patroni_wale_restore"}
-  - {option: "no_master", value: "1"}
-  - {option: "envdir", value: "/etc/wal_e/envdir"}
-  - {option: "use_iam", value: "1"}
 wal_g:
   - {option: "command", value: "wal-g backup-fetch {{ postgresql_data_dir }} LATEST"}
   - {option: "no_params", value: "True"}
@@ -255,7 +269,7 @@ postgresql_restore_command: ""
 
 # WAL-G
 wal_g_install: false  # or 'true'
-wal_g_ver: "v0.2.15"
+wal_g_ver: "v0.2.19"
 wal_g_json:  # more options see https://github.com/wal-g/wal-g#configuration
   - {option: "AWS_ACCESS_KEY_ID", value: "minio"}
   - {option: "AWS_SECRET_ACCESS_KEY", value: "miniosecret"}
@@ -299,5 +313,8 @@ pgbackrest_patroni_cluster_restore_command:
 # PITR mode (if patroni_cluster_bootstrap_method: "pgbackrest" or "wal-g"):
 # 1) The database cluster directory will be cleaned (for "wal-g") or overwritten (for "pgbackrest" --delta restore).
 # 2) And also the patroni cluster "{{ patroni_cluster_name }}" will be removed from the DCS (if exist) before recovery.
+
+disable_archive_command: true  # or 'false' to not disable archive_command after restore
+keep_patroni_dynamic_json: true  # or 'false' to remove patroni.dynamic.json after restore (if exists)
 
 ...

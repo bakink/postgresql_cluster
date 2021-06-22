@@ -1,25 +1,15 @@
 ---
 # yamllint disable rule:truthy
 
-name: Molecule PostgresPro
+name: scheduled PostgreSQL (OracleLinux 7)
 
 on:
   schedule:
-    - cron: '0 0 * * 0'
+    - cron: '45 0 * * *'
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        distro:
-          - centos8
-          - centos7
-          - debian10
-          - debian9
-          - ubuntu1804
-          - ubuntu2004
 
     steps:
       - name: checkout
@@ -33,11 +23,11 @@ jobs:
       - name: Install dependencies
         run: pip3 install molecule[docker] ansible
 
-      - name: Run Molecule tests for PostgresPro
-        run: molecule test --scenario-name postgrespro
+      - name: Run Molecule tests
+        run: molecule test --scenario-name oraclelinux
         env:
           PY_COLORS: '1'
           ANSIBLE_FORCE_COLOR: '1'
-          MOLECULE_DISTRO: ${{ matrix.distro }}
+          MOLECULE_DISTRO_TAG: 7
 
 ...

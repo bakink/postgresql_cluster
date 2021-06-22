@@ -68,29 +68,33 @@ Written in Go. Cybertec Schönig & Schönig GmbH https://www.cybertec-postgresql
 RedHat and Debian based distros (x86_64)
 
 ###### Minimum OS versions:
-- CentOS: 7
-- Ubuntu: 16.04
 - Debian: 9
+- Ubuntu: 18.04
+- CentOS: 7
+- OracleLinux 7
 
-:white_check_mark: tested, works fine: `Debian 9/10, Ubuntu 18.04/20.04, CentOS 7.x/8.x`
+:white_check_mark: tested, works fine: `Debian 9/10, Ubuntu 18.04/20.04, CentOS 7/8, OracleLinux 7/8`
 
 ###### PostgreSQL versions: 
 all supported PostgreSQL versions
 
-:white_check_mark: tested, works fine: `PostgreSQL 9.6, 10, 11, 12`
+:white_check_mark: tested, works fine: `PostgreSQL 9.6, 10, 11, 12, 13`
 
 _Table of results of daily automated testing of cluster deployment:_
 | Distribution | Test result |
 |--------------|:----------:|
-| CentOS 7     | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(CentOS%207))](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3A%22scheduled+PostgreSQL+%28CentOS+7%29%22) |
-| CentOS 8     | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(CentOS%208))](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3A%22scheduled+PostgreSQL+%28CentOS+8%29%22) |
 | Debian 9     | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(Debian%209))](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3A%22scheduled+PostgreSQL+%28Debian+9%29%22) |
 | Debian 10    | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(Debian%2010))](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3A%22scheduled+PostgreSQL+%28Debian+10%29%22) |
 | Ubuntu 18.04 | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(Ubuntu%2018.04))](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3A%22scheduled+PostgreSQL+%28Ubuntu+18.04%29%22) |
 | Ubuntu 20.04 | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(Ubuntu%2020.04))](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3A%22scheduled+PostgreSQL+%28Ubuntu+20.04%29%22) |
+| CentOS 7     | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(CentOS%207))](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3A%22scheduled+PostgreSQL+%28CentOS+7%29%22) |
+| CentOS 8     | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(CentOS%208))](https://github.com/vitabaks/postgresql_cluster/actions?query=workflow%3A%22scheduled+PostgreSQL+%28CentOS+8%29%22) |
+| Oracle Linux 7 | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(OracleLinux%207))](https://github.com/vitabaks/postgresql_cluster/actions/workflows/schedule_pg_oracle_linux7.yml) |
+| Oracle Linux 8 | [![GitHub Workflow Status](https://img.shields.io/github/workflow/status/vitabaks/postgresql_cluster/scheduled%20PostgreSQL%20(OracleLinux%208))](https://github.com/vitabaks/postgresql_cluster/actions/workflows/schedule_pg_oracle_linux8.yml) |
+
 
 ###### Ansible version 
-This has been tested on Ansible 2.7.х, 2.8.х, 2.9.х
+This has been tested on Ansible 2.7, 2.8, 2.9, 2.10
 
 ## Requirements
 This playbook requires root privileges or sudo.
@@ -137,8 +141,8 @@ To minimize the risk of losing data on autofailover, you can configure settings 
 ## Deployment: quick start
 0. [Install Ansible](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) to the managed machine
 ###### Example: install latest release using [pip](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#latest-releases-via-pip)
-
-`pip install ansible`
+`sudo apt install python3-pip sshpass git -y` \
+`sudo pip3 install ansible`
 
 1. Download or clone this repository
 
@@ -342,6 +346,14 @@ Recovery steps with pgBackRest:
 17. Check that the patroni is healthy on the replica server (timeout 10 hours);
 18. Check postgresql cluster health (finish).
 ```
+
+**Why disable archive_command?**
+
+This is necessary to avoid conflicts in the archived log storage when archiving WALs. When multiple clusters try to send WALs to the same storage. \
+For example, when you make multiple clones of a cluster from one backup.
+
+You can change this parameter using `patronictl edit-config` after restore. \
+Or set `disable_archive_command: false` to not disable archive_command after restore.
 </p></details>
 
 

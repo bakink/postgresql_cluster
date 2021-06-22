@@ -5,6 +5,21 @@ scope: {{ patroni_cluster_name }}
 name: {{ ansible_hostname }}
 namespace: /service/
 
+{% if patroni_log_destination == 'logfile' %}
+log:
+  level: {{ patroni_log_level |upper }}
+  traceback_level: {{ patroni_log_traceback_level |upper }}
+  format: {{ patroni_log_format |quote }}
+  dateformat: {{ patroni_log_dateformat |quote }}
+  max_queue_size: {{ patroni_log_max_queue_size |int }}
+  dir: {{ patroni_log_dir }}
+  file_num: {{ patroni_log_file_num |int }}
+  file_size: {{ patroni_log_file_size |int }}
+  loggers:
+    patroni.postmaster: {{ patroni_log_loggers_patroni_postmaster |upper }}
+    urllib3: {{ patroni_log_loggers_urllib3 |upper }}
+{% endif %}
+
 restapi:
   listen: {{ hostvars[inventory_hostname]['inventory_hostname'] }}:8008
   connect_address: {{ hostvars[inventory_hostname]['inventory_hostname'] }}:8008
@@ -131,12 +146,6 @@ postgresql:
     {{ item.option }}: {{ item.value }}
     {% endfor %}
   {% endif %}
-  {% if 'wal_e' in patroni_create_replica_methods %}
-  wal_e:
-    {% for item in wal_e %}
-    {{ item.option }}: {{ item.value }}
-    {% endfor %}
-  {% endif %}
   {% if 'wal_g' in patroni_create_replica_methods %}
   wal_g:
     {% for item in wal_g %}
@@ -148,6 +157,9 @@ postgresql:
     {% for item in basebackup %}
     {{ item.option }}: '{{ item.value }}'
     {% endfor %}
+    {% if postgresql_version is version('10', '>=') and postgresql_wal_dir is defined and postgresql_wal_dir | length > 0 %}
+    waldir: {{ postgresql_wal_dir }}
+    {% endif %}
   {% endif %}
 {% else %}
     - basebackup
